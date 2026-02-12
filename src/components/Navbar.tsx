@@ -1,12 +1,16 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Scale, Menu, X } from "lucide-react";
+import { Scale, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 
 const Navbar = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { session, signOut } = useAuth();
 
   const links = [
     { to: "/", label: "Home" },
@@ -14,6 +18,12 @@ const Navbar = () => {
     { to: "/about", label: "About" },
     { to: "/contact", label: "Contact" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully!");
+    navigate("/");
+  };
 
   return (
     <motion.nav
@@ -43,11 +53,24 @@ const Navbar = () => {
               {link.label}
             </Link>
           ))}
-          <Link to="/dashboard">
-            <Button size="sm" className="bg-gradient-hero text-primary-foreground hover:opacity-90">
-              Analyze Document
-            </Button>
-          </Link>
+          {session ? (
+            <div className="flex items-center gap-3">
+              <Link to="/dashboard">
+                <Button size="sm" className="bg-gradient-hero text-primary-foreground hover:opacity-90">
+                  Analyze Document
+                </Button>
+              </Link>
+              <Button size="sm" variant="outline" onClick={handleSignOut} className="gap-1.5">
+                <LogOut className="h-3.5 w-3.5" /> Sign Out
+              </Button>
+            </div>
+          ) : (
+            <Link to="/auth">
+              <Button size="sm" className="bg-gradient-hero text-primary-foreground hover:opacity-90">
+                Sign In
+              </Button>
+            </Link>
+          )}
         </div>
 
         <button
@@ -75,11 +98,24 @@ const Navbar = () => {
                 {link.label}
               </Link>
             ))}
-            <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
-              <Button className="w-full bg-gradient-hero text-primary-foreground">
-                Analyze Document
-              </Button>
-            </Link>
+            {session ? (
+              <>
+                <Link to="/dashboard" onClick={() => setMobileOpen(false)}>
+                  <Button className="w-full bg-gradient-hero text-primary-foreground">
+                    Analyze Document
+                  </Button>
+                </Link>
+                <Button variant="outline" onClick={() => { handleSignOut(); setMobileOpen(false); }} className="w-full gap-1.5">
+                  <LogOut className="h-3.5 w-3.5" /> Sign Out
+                </Button>
+              </>
+            ) : (
+              <Link to="/auth" onClick={() => setMobileOpen(false)}>
+                <Button className="w-full bg-gradient-hero text-primary-foreground">
+                  Sign In
+                </Button>
+              </Link>
+            )}
           </div>
         </motion.div>
       )}
