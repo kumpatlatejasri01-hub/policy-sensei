@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import React, { useCallback } from "react";
 import { motion } from "framer-motion";
 import { Upload, X, FileText, Plus } from "lucide-react";
 
@@ -20,7 +20,7 @@ interface SingleUploadProps {
   onFileChange: (file: File | null) => void;
 }
 
-export const SingleFileUpload = ({ label, file, onFileChange }: SingleUploadProps) => {
+export const SingleFileUpload = React.forwardRef<HTMLDivElement, SingleUploadProps>(({ label, file, onFileChange }, ref) => {
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
@@ -89,7 +89,8 @@ export const SingleFileUpload = ({ label, file, onFileChange }: SingleUploadProp
       )}
     </div>
   );
-};
+});
+SingleFileUpload.displayName = "SingleFileUpload";
 
 interface PdfUploadProps {
   files: File[];
