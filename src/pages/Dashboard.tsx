@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { RotateCcw, Mail, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -7,28 +7,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import PdfUpload from "@/components/PdfUpload";
+import PdfUpload, { SingleFileUpload } from "@/components/PdfUpload";
 import ProcessingScreen from "@/components/ProcessingScreen";
 import SuccessScreen from "@/components/SuccessScreen";
 import { COUNTRIES } from "@/lib/countries";
 import { submitToWebhook } from "@/lib/webhook";
 
 type ViewState = "form" | "processing" | "success" | "error";
+type AnalysisType = "single" | "comparative";
 
 const Dashboard = () => {
-  const [files, setFiles] = useState<File[]>([]);
-  const [jurisdiction, setJurisdiction] = useState("");
+  const [analysisType, setAnalysisType] = useState<AnalysisType>("single");
+  const [singleFiles, setSingleFiles] = useState<File[]>([]);
+  const [clientDoc, setClientDoc] = useState<File | null>(null);
+  const [hrDoc, setHrDoc] = useState<File | null>(null);
+  const [jurisdiction, setJurisdiction] = useState("India");
   const [email, setEmail] = useState("");
   const [viewState, setViewState] = useState<ViewState>("form");
   const [processingStep, setProcessingStep] = useState(0);
   const [webhookStatus, setWebhookStatus] = useState<"sending" | "processing" | "completed" | "failed">("sending");
 
   const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
-  const canSubmit = files.length > 0 && !!jurisdiction && emailValid;
+
+  const allFiles =
+    analysisType === "single"
+      ? singleFiles
+      : [clientDoc, hrDoc].filter(Boolean) as File[];
+
+  const canSubmit =
+    allFiles.length > 0 &&
+    (analysisType === "single" || (!!clientDoc && !!hrDoc)) &&
+    !!jurisdiction &&
+    emailValid;
 
   const resetForm = () => {
-    setFiles([]);
-    setJurisdiction("");
+    setSingleFiles([]);
+    setClientDoc(null);
+    setHrDoc(null);
+    setJurisdiction("India");
     setEmail("");
     setViewState("form");
     setProcessingStep(0);
@@ -41,7 +57,7 @@ const Dashboard = () => {
     setWebhookStatus("sending");
     setProcessingStep(0);
 
-    const totalSteps = 5 + files.length;
+    const totalSteps = 5 + allFiles.length;
 
     const stepInterval = setInterval(() => {
       setProcessingStep((prev) => {
@@ -55,7 +71,7 @@ const Dashboard = () => {
 
     try {
       setWebhookStatus("processing");
-      await submitToWebhook(files, email.trim(), jurisdiction);
+      await submitToWebhook(allFiles, email.trim(), jurisdiction);
       clearInterval(stepInterval);
       setProcessingStep(totalSteps);
       setWebhookStatus("completed");
@@ -92,7 +108,7 @@ const Dashboard = () => {
         <Navbar />
         <div className="container mx-auto px-6 pt-28 pb-20">
           <SuccessScreen
-            fileNames={files.map((f) => f.name)}
+            fileNames={allFiles.map((f) => f.name)}
             jurisdiction={jurisdiction}
             email={email}
             analysisType="legal"
@@ -130,8 +146,29 @@ const Dashboard = () => {
         </motion.div>
 
         <div className="mx-auto max-w-2xl space-y-6">
-          {/* PDF Upload */}
-          <PdfUpload files={files} onFilesChange={setFiles} />
+          {/* Analysis Type */}
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-foreground">Analysis Type</label>
+            <Select value={analysisType} onValueChange={(v) => setAnalysisType(v as AnalysisType)}>
+              <SelectTrigger className="h-12">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="single">Single Document Analysis</SelectItem>
+                <SelectItem value="comparative">Client vs HR Policies</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Conditional Upload Fields */}
+          {analysisType === "single" ? (
+            <PdfUpload files={singleFiles} onFilesChange={setSingleFiles} />
+          ) : (
+            <div className="space-y-4">
+              <SingleFileUpload label="Client Document" file={clientDoc} onFileChange={setClientDoc} />
+              <SingleFileUpload label="HR Policy Document" file={hrDoc} onFileChange={setHrDoc} />
+            </div>
+          )}
 
           {/* Jurisdiction */}
           <div>
