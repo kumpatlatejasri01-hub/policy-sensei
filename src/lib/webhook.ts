@@ -1,4 +1,4 @@
-const N8N_WEBHOOK_URL = "https://navya-12345.app.n8n.cloud/webhook-test/legalmind";
+import { supabase } from "@/integrations/supabase/client";
 
 export interface WebhookPayload {
   project_name: string;
@@ -30,22 +30,20 @@ export async function submitToWebhook(
     }))
   );
 
-  const payload: WebhookPayload = {
-    project_name: "LEGALMIND",
-    pdf_files: pdfFiles,
-    email,
-    jurisdiction,
-    file_names: files.map((f) => f.name).join(", "),
-    submission_timestamp: new Date().toISOString(),
-  };
-
-  const res = await fetch(N8N_WEBHOOK_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+  const { data, error } = await supabase.functions.invoke("submit-documents", {
+    body: {
+      pdf_files: pdfFiles,
+      email,
+      jurisdiction,
+      file_names: files.map((f) => f.name).join(", "),
+    },
   });
 
-  if (!res.ok) {
-    throw new Error(`Webhook error: ${res.status}`);
+  if (error) {
+    throw new Error(`Submission failed: ${error.message}`);
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
   }
 }
